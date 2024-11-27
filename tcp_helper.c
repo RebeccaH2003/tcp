@@ -12,7 +12,6 @@ uint32_t sliding_window(int sockfd, uint32_t pkt_size, int duration, uint32_t ma
     printf("server exit here2\n");
 
     uint32_t sequence_number = 1; // Sequence number starts at 1
-    uint32_t current_window_size = 1; // Start with a small window size
     long double best_bandwidth = 0.0; // To track the best bandwidth
     uint32_t best_window = 1;         // To track the best window size
 
@@ -98,7 +97,7 @@ uint32_t sliding_window(int sockfd, uint32_t pkt_size, int duration, uint32_t ma
 
     }
 
-    printf("\nBest Window Size: %u packets (%u bytes) with Bandwidth: %.2f Mbps\n", best_window, best_window * pkt_size, best_bandwidth);
+    printf("\nBest Window Size: %u packets (%u bytes) with Bandwidth: %.2Lf Mbps\n", best_window, best_window * pkt_size, best_bandwidth);
 
     free(packet);
     return best_window; // Return the best window size
