@@ -6,6 +6,7 @@
 #include <netinet/tcp.h>
 #include <netinet/ip.h>
 #include <arpa/inet.h>
+#include <stdint.h>
 
 #define BUFFER_SIZE 1024
 
@@ -51,7 +52,6 @@ int main(int argc, char *argv[]) {
     printf("Connection accepted from %s:%d\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
 
     char buffer[BUFFER_SIZE];
-    char ack[BUFFER_SIZE] = "ACK";
 
     while (1) {
         // Receive data
@@ -65,8 +65,16 @@ int main(int argc, char *argv[]) {
             break;
         }
 
-        // Send acknowledgment
-        if (send(client_sockfd, ack, BUFFER_SIZE, 0) < 0) {
+        // Extract sequence number
+        uint32_t seq_num;
+        memcpy(&seq_num, buffer, sizeof(seq_num));
+        seq_num = ntohl(seq_num); // Convert from network byte order to host byte order
+
+        printf("Received packet with sequence number: %u\n", seq_num);
+
+        // Send acknowledgment with the same sequence number
+        uint32_t ack_seq_num = htonl(seq_num); // Convert to network byte order
+        if (send(client_sockfd, &ack_seq_num, sizeof(ack_seq_num), 0) < 0) {
             perror("send ACK failed");
             break;
         }
