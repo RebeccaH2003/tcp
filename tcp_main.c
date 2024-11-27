@@ -180,24 +180,34 @@ int main(int argc, char *argv[]) {
             close(sockfd);
             return 1;
         }
+         // Calculate average RTT
+        double avg_rtt = total_rtt / TIME_INTERVAL;
+        printf("Average RTT: %.6f nanoseconds\n", avg_rtt);
+
+        // Convert average RTT to seconds for bandwidth estimation
+        double avg_rtt_sec = avg_rtt / 1e9;
+        // Estimate optimal window size (assuming 100 Mbps bandwidth)
+        double bandwidth = 100 * 1e6; // 100 Mbps in bits per second
+        double optimal_window = bandwidth * avg_rtt_sec / 8; // Convert bits to bytes
+        printf("Optimal window size: %.2f bytes\n", optimal_window);
     }
     else if(MODE == 2) {
         printf("======================sliding window==================\n");
+        // Define parameters for the sliding window test
+        uint32_t max_window_size = 20; // Maximum window size (packets)
+        uint32_t step_size = 1;        // Increment step for window size
+        uint32_t duration = TIME_INTERVAL; // Test duration for each window size (seconds)
+        uint32_t best_window_size = 0; // Store the best window size
 
+        // Run the sliding window function
+        best_window_size = sliding_window(sockfd, PKT_SIZE, duration, max_window_size, step_size);
 
+        if (best_window_size > 0) {
+            printf("Best Window Size: %u packets\n", best_window_size);
+        } else {
+            printf("Sliding Window Test Failed.\n");
+        }
     }
-
-    // Calculate average RTT
-    double avg_rtt = total_rtt / TIME_INTERVAL;
-    printf("Average RTT: %.6f nanoseconds\n", avg_rtt);
-
-    // Convert average RTT to seconds for bandwidth estimation
-    double avg_rtt_sec = avg_rtt / 1e9;
-    // Estimate optimal window size (assuming 100 Mbps bandwidth)
-    double bandwidth = 100 * 1e6; // 100 Mbps in bits per second
-    double optimal_window = bandwidth * avg_rtt_sec / 8; // Convert bits to bytes
-    printf("Optimal window size: %.2f bytes\n", optimal_window);
-
     close(sockfd);
     free(DST_IP);  // Free allocated memory
     return 0;

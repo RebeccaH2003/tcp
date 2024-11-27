@@ -26,41 +26,47 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    // Create a TCP socket
     int server_sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_sockfd < 0) {
-        perror("socket creation failed");
+        perror("Socket creation failed");
         return 1;
     }
 
+    // Set up the server address
     struct sockaddr_in server_addr;
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(atoi(argv[1]));
     server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
+    // Bind the socket to the address
     if (bind(server_sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
-        perror("bind failed");
+        perror("Bind failed");
         close(server_sockfd);
         return 1;
     }
 
+    // Start listening for connections
     if (listen(server_sockfd, 5) < 0) {
-        perror("listen failed");
+        perror("Listen failed");
         close(server_sockfd);
         return 1;
     }
 
+    // Accept a client connection
     struct sockaddr_in client_addr;
     socklen_t client_len = sizeof(client_addr);
     int client_sockfd = accept(server_sockfd, (struct sockaddr*)&client_addr, &client_len);
     if (client_sockfd < 0) {
-        perror("accept failed");
+        perror("Accept failed");
         close(server_sockfd);
         return 1;
     }
 
     printf("Connection accepted from %s:%d\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
 
+    // Server-side sliding window setup
     char buffer[BUFFER_SIZE];
     uint32_t expected_seq_num = 1; // Start with sequence number 1
 
@@ -71,36 +77,38 @@ int main(int argc, char *argv[]) {
             if (received == 0) {
                 printf("Client disconnected.\n");
             } else {
-                perror("recv failed");
+                perror("Receive failed");
             }
             break;
         }
 
-        // Extract sequence number
+        // Extract the sequence number
         uint32_t seq_num;
         memcpy(&seq_num, buffer, sizeof(seq_num));
         seq_num = ntohl(seq_num); // Convert from network byte order to host byte order
 
-        // Get timestamp
+        // Get timestamp for logging
         char timestamp[64];
         get_timestamp(timestamp, sizeof(timestamp));
 
+        // Check the sequence number
         if (seq_num != expected_seq_num) {
             printf("[%s] Error: Expected sequence number %u but received %u\n", timestamp, expected_seq_num, seq_num);
-            expected_seq_num = seq_num + 1; // Adjust to handle skipped packets
+            expected_seq_num = seq_num + 1; // Adjust to next sequence
         } else {
             printf("[%s] Received packet with sequence number: %u\n", timestamp, seq_num);
             expected_seq_num++;
         }
 
-        // Send acknowledgment with the same sequence number
+        // Send an ACK for the received sequence number
         uint32_t ack_seq_num = htonl(seq_num); // Convert to network byte order
         if (send(client_sockfd, &ack_seq_num, sizeof(ack_seq_num), 0) < 0) {
-            perror("send ACK failed");
+            perror("Send ACK failed");
             break;
         }
     }
 
+    // Clean up and close sockets
     close(client_sockfd);
     close(server_sockfd);
     return 0;
