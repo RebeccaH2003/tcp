@@ -2,11 +2,14 @@
 
 uint32_t sliding_window(int sockfd, uint32_t pkt_size, int duration, uint32_t max_window_size, uint32_t step_size) {
     char *packet = malloc(pkt_size);
+    printf("server exit here1\n");
     if (!packet) {
         perror("Failed to allocate packet memory");
         return 0; // Return 0 to indicate failure
     }
     memset(packet, 'A', pkt_size); // Fill packet with dummy data
+
+    printf("server exit here2\n");
 
     uint32_t sequence_number = 1; // Sequence number starts at 1
     uint32_t current_window_size = 1; // Start with a small window size

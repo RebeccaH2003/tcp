@@ -198,7 +198,7 @@ int main(int argc, char *argv[]) {
         uint32_t step_size = 1;        // Increment step for window size
         uint32_t duration = TIME_INTERVAL; // Test duration for each window size (seconds)
         uint32_t best_window_size = 0; // Store the best window size
-
+        printf("here\n");
         // Run the sliding window function
         best_window_size = sliding_window(sockfd, PKT_SIZE, duration, max_window_size, step_size);
 
