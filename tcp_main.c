@@ -61,18 +61,15 @@ int main(int argc, char *argv[]) {
         } else if (strstr(argv[i], "--dst_port=") != NULL || strstr(argv[i], "-sp=") != NULL) {
             DST_PORT = strtol(strchr(argv[i], '=') + 1, NULL, 10);
             continue;
-        } else if (strstr(argv[i], "--dest_ip=") != NULL || strstr(argv[i], "-dp=") != NULL) {
+        } else if (strstr(argv[i], "--dst_ip=") != NULL || strstr(argv[i], "-dp=") != NULL) {
             DST_IP = strtol(strchr(argv[i], '=') + 1, NULL, 10);
             continue;
         } else if (strstr(argv[i], "--testing_interval=") != NULL || strstr(argv[i], "-i=") != NULL) {
             TIME_INTERVAL = strtol(strchr(argv[i], '=') + 1, NULL, 10);
             continue;
         }
-        else if (strstr(argv[i], "--src_port=") != NULL || strstr(argv[i], "-sp=") != NULL) {
-            SRC_PORT = strtol(strchr(argv[i], '=') + 1, NULL, 10);
-            continue;
-        }
     }
+    print("I am here now\n");
 
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
@@ -98,6 +95,7 @@ int main(int argc, char *argv[]) {
 
     double total_rtt = 0.0;
     if(MODE == 1) {
+        printf("I am in stop and wait now\n");
         total_rtt = stop_and_wait(sockfd);
     }
 
