@@ -18,58 +18,20 @@ uint64_t TIME_INTERVAL;
 int MODE;
 uint64_t TIMEOUT;
 
-
-// double stop_and_wait(int sockfd) {
-//     char buffer[BUFFER_SIZE];
-//     memset(buffer, 'A', BUFFER_SIZE); // Fill buffer with dummy data
-//     char ack[BUFFER_SIZE];
-//     double total_rtt = 0.0;
-//     for (int i = 0; i < TIME_INTERVAL; i++) {  // Correct iteration to TEST_ROUNDS
-//         struct timeval start, end;
-
-//         // Record start time
-//         gettimeofday(&start, NULL);
-
-//         // Send a packet
-//         if (send(sockfd, buffer, BUFFER_SIZE, 0) < 0) {
-//             perror("send failed");
-//             close(sockfd);
-//             return -1;  // Return error indicator
-//         }
-
-//         // Wait for ACK
-//         if (recv(sockfd, ack, BUFFER_SIZE, 0) <= 0) {
-//             perror("recv failed");
-//             close(sockfd);
-//             return -1;  // Return error indicator
-//         }
-
-//         // Record end time
-//         gettimeofday(&end, NULL);
-
-//         // Calculate RTT
-//         double rtt = (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec) / 1e6;
-//         printf("RTT for round %d: %.6f seconds\n", i + 1, rtt);
-
-//         total_rtt += rtt;
-//     }
-//     return total_rtt;
-// }
-
 double stop_and_wait(int sockfd) {
     char buffer[PKT_SIZE];
     memset(buffer, 'A', PKT_SIZE); // Fill buffer with dummy data
     char ack[BUFFER_SIZE];
-    double total_rtt = 0.0;
+    uint64_t total_rtt_ns = 0; // Use nanoseconds for total RTT
 
     for (int i = 0; i < TEST_ROUNDS; i++) {
-        struct timeval start, end;
+        struct timespec start, end;
         int retries = 0;
         int max_retries = 5; // Maximum number of retransmissions
 
         while (retries < max_retries) {
-            // Record start time
-            gettimeofday(&start, NULL);
+            // Record start time in nanoseconds
+            clock_gettime(CLOCK_MONOTONIC, &start);
 
             // Send a packet
             if (send(sockfd, buffer, PKT_SIZE, 0) < 0) {
@@ -82,11 +44,13 @@ double stop_and_wait(int sockfd) {
             int recv_status = recv(sockfd, ack, BUFFER_SIZE, 0);
             if (recv_status > 0) {
                 // ACK received successfully
-                gettimeofday(&end, NULL);
-                double rtt = (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec) / 1e6;
-                printf("RTT for round %d: %.6f seconds\n", i + 1, rtt);
+                clock_gettime(CLOCK_MONOTONIC, &end);
 
-                total_rtt += rtt;
+                // Calculate RTT in nanoseconds
+                uint64_t rtt_ns = (end.tv_sec - start.tv_sec) * 1e9 + (end.tv_nsec - start.tv_nsec);
+                printf("RTT for round %d: %lu nanoseconds\n", i + 1, rtt_ns);
+
+                total_rtt_ns += rtt_ns;
                 break; // Exit retry loop
             } else if (recv_status == 0) {
                 // Connection closed by the server
@@ -112,7 +76,8 @@ double stop_and_wait(int sockfd) {
             return -1;
         }
     }
-    return total_rtt;
+
+    return (double)total_rtt_ns; // Return total RTT in nanoseconds as double
 }
 
 
@@ -147,7 +112,7 @@ int main(int argc, char *argv[]) {
             if (value) TIMEOUT = strtol(value + 1, NULL, 10);
             continue;
         }
-        else if (strstr(argv[i], "--packe_size=") != NULL || strstr(argv[i], "-ps=") != NULL) {
+        else if (strstr(argv[i], "--packet_size=") != NULL || strstr(argv[i], "-ps=") != NULL) {
             char *value = strchr(argv[i], '=');
             if (value) PKT_SIZE = strtol(value + 1, NULL, 10);
             continue;
@@ -206,12 +171,14 @@ int main(int argc, char *argv[]) {
     }
 
     // Calculate average RTT
-    double avg_rtt = total_rtt / TEST_ROUNDS;
-    printf("Average RTT: %.6f seconds\n", avg_rtt);
+    double avg_rtt = total_rtt / TIME_INTERVAL;
+    printf("Average RTT: %.6f nanoseconds\n", avg_rtt);
 
+    // Convert average RTT to seconds for bandwidth estimation
+    double avg_rtt_sec = avg_rtt / 1e9;
     // Estimate optimal window size (assuming 100 Mbps bandwidth)
     double bandwidth = 100 * 1e6; // 100 Mbps in bits per second
-    double optimal_window = bandwidth * avg_rtt / 8; // Convert bits to bytes
+    double optimal_window = bandwidth * avg_rtt_sec / 8; // Convert bits to bytes
     printf("Optimal window size: %.2f bytes\n", optimal_window);
 
     close(sockfd);
