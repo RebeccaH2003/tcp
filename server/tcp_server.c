@@ -7,8 +7,18 @@
 #include <netinet/ip.h>
 #include <arpa/inet.h>
 #include <stdint.h>
+#include <time.h>
 
 #define BUFFER_SIZE 1024
+
+// Function to get a timestamp string
+void get_timestamp(char *buffer, size_t size) {
+    struct timespec ts;
+    struct tm *tm_info;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    tm_info = localtime(&ts.tv_sec);
+    strftime(buffer, size, "%Y-%m-%d %H:%M:%S", tm_info);
+}
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
@@ -52,6 +62,7 @@ int main(int argc, char *argv[]) {
     printf("Connection accepted from %s:%d\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
 
     char buffer[BUFFER_SIZE];
+    uint32_t expected_seq_num = 1; // Start with sequence number 1
 
     while (1) {
         // Receive data
@@ -70,7 +81,17 @@ int main(int argc, char *argv[]) {
         memcpy(&seq_num, buffer, sizeof(seq_num));
         seq_num = ntohl(seq_num); // Convert from network byte order to host byte order
 
-        printf("Received packet with sequence number: %u\n", seq_num);
+        // Get timestamp
+        char timestamp[64];
+        get_timestamp(timestamp, sizeof(timestamp));
+
+        if (seq_num != expected_seq_num) {
+            printf("[%s] Error: Expected sequence number %u but received %u\n", timestamp, expected_seq_num, seq_num);
+            expected_seq_num = seq_num + 1; // Adjust to handle skipped packets
+        } else {
+            printf("[%s] Received packet with sequence number: %u\n", timestamp, seq_num);
+            expected_seq_num++;
+        }
 
         // Send acknowledgment with the same sequence number
         uint32_t ack_seq_num = htonl(seq_num); // Convert to network byte order
