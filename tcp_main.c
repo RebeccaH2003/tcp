@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
             continue;
         }
     }
-    print("I am here now\n");
+    printf("I am here now\n");
 
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
