@@ -16,24 +16,24 @@ uint32_t sliding_window(int sockfd, uint32_t pkt_size, int duration, uint32_t ma
     long double best_bandwidth = 0.0; // To track the best bandwidth
     uint32_t best_window = 1;         // To track the best window size
 
+    struct timespec start_time, end_time;
+    clock_gettime(CLOCK_MONOTONIC, &start_time);
+    uint64_t test_end_time = start_time.tv_sec + duration;
+
     printf("Starting Sliding Window Bandwidth Test...\n");
 
-    while (current_window_size <= max_window_size) {
+    for (uint32_t current_window_size = 1; current_window_size <= max_window_size; current_window_size++) {
         uint32_t packets_sent = 0;
         uint64_t bytes_sent = 0;
         uint32_t acked_packets = 0;
+        uint32_t packets_in_flight = 0;
+        
 
         printf("\nTesting with Window Size: %u packets (%u bytes)\n", current_window_size, current_window_size * pkt_size);
 
-        struct timespec start_time, end_time;
-        clock_gettime(CLOCK_MONOTONIC, &start_time);
-
-        uint64_t test_end_time = start_time.tv_sec + duration;
-
         // Run the sliding window test for the current window size
         while (time(NULL) < test_end_time) {
-            uint32_t packets_in_flight = 0;
-
+            
             // Send packets in the current window
             while (packets_in_flight < current_window_size) {
                 uint32_t seq_num_net_order = htonl(sequence_number);
@@ -61,10 +61,12 @@ uint32_t sliding_window(int sockfd, uint32_t pkt_size, int duration, uint32_t ma
                     ack_seq_num = ntohl(ack_seq_num);
                     if (ack_seq_num >= sequence_number - packets_in_flight && ack_seq_num < sequence_number) {
                         acked_packets++;
+                        packets_in_flight--;
                     }
                 } else if (recv_status < 0) {
                     if (errno == EAGAIN || errno == EWOULDBLOCK) {
                         printf("Timeout occurred, assuming packet loss\n");
+                        packets_in_flight=0;
                         break;
                     } else {
                         perror("recv failed");
@@ -73,28 +75,27 @@ uint32_t sliding_window(int sockfd, uint32_t pkt_size, int duration, uint32_t ma
                     }
                 }
             }
+            clock_gettime(CLOCK_MONOTONIC, &end_time);
+            double elapsed_time = (end_time.tv_sec - start_time.tv_sec) +
+                                (end_time.tv_nsec - start_time.tv_nsec) / 1e9;
+
+            // Calculate average bandwidth for this window size
+            double bandwidth = (bytes_sent * 8.0) / (elapsed_time * 1024 * 1024); // Mbps
+            printf("Average Bandwidth: %.2f Mbps for Window Size: %u packets\n", bandwidth, current_window_size);
+
+            // Check if this is the best bandwidth so far
+            if (bandwidth > best_bandwidth) {
+                best_bandwidth = bandwidth;
+                best_window = current_window_size;
+            } else {
+                // Stop testing further if bandwidth decreases
+                printf("Bandwidth decreased. Stopping test.\n");
+                break;
+            }
+
+
         }
 
-        clock_gettime(CLOCK_MONOTONIC, &end_time);
-        double elapsed_time = (end_time.tv_sec - start_time.tv_sec) +
-                              (end_time.tv_nsec - start_time.tv_nsec) / 1e9;
-
-        // Calculate average bandwidth for this window size
-        double bandwidth = (bytes_sent * 8.0) / (elapsed_time * 1024 * 1024); // Mbps
-        printf("Average Bandwidth: %.2f Mbps for Window Size: %u packets\n", bandwidth, current_window_size);
-
-        // Check if this is the best bandwidth so far
-        if (bandwidth > best_bandwidth) {
-            best_bandwidth = bandwidth;
-            best_window = current_window_size;
-        } else {
-            // Stop testing further if bandwidth decreases
-            printf("Bandwidth decreased. Stopping test.\n");
-            break;
-        }
-
-        // Increase window size for the next test
-        current_window_size += step_size;
     }
 
     printf("\nBest Window Size: %u packets (%u bytes) with Bandwidth: %.2f Mbps\n", best_window, best_window * pkt_size, best_bandwidth);
