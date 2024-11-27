@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "tcp_helper.h": "c",
+        "tcp.h": "c",
+        "time.h": "c"
+    }
+}
