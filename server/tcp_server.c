@@ -85,7 +85,7 @@ int main(int argc, char *argv[]) {
         // Extract the sequence number
         uint32_t seq_num;
         memcpy(&seq_num, buffer, sizeof(seq_num));
-        seq_num = ntohl(seq_num); // Convert from network byte order to host byte order
+        // seq_num = ntohl(seq_num); // Convert from network byte order to host byte order
 
         // Get timestamp for logging
         char timestamp[64];

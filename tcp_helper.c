@@ -25,8 +25,9 @@ void stop_and_wait(int sockfd, uint32_t packet_size, uint64_t duration) {
         while (retries < max_retries) {
             printf("try number: %d\n", retries+1);
             // Add sequence number to the packet
-            uint32_t seq_num_net_order = htonl(sequence_number);
-            memcpy(buffer, &seq_num_net_order, sizeof(seq_num_net_order));
+            // uint32_t seq_num_net_order = htonl(sequence_number);
+            printf("the expect seq num is %u \n", sequence_number);
+            memcpy(buffer, &sequence_number, sizeof(sequence_number));
 
             // Send the packet
             printf("sending the packet...\n");
@@ -52,7 +53,7 @@ void stop_and_wait(int sockfd, uint32_t packet_size, uint64_t duration) {
                     clock_gettime(CLOCK_MONOTONIC, &end);
                     // Calculate RTT in nanoseconds
                     uint64_t rtt_ns = (end.tv_sec - start.tv_sec) * 1e9 + (end.tv_nsec - start.tv_nsec);
-                    printf("RTT for oacket %u: %lu nanoseconds\n", sequence_number, rtt_ns);
+                    printf("RTT for packet %u: %lu nanoseconds\n", sequence_number, rtt_ns);
                     total_rtt_ns += rtt_ns;
                     num_of_packet++;
                     break; // Exit retry loop
