@@ -91,22 +91,7 @@ int main(int argc, char *argv[]) {
     double total_rtt = 0.0;
     if (MODE == 1) {
         printf("======================stop and wait==================\n");
-        total_rtt = stop_and_wait(sockfd, PKT_SIZE, TIME_INTERVAL);
-        if (total_rtt < 0) {
-            printf("Error during stop-and-wait.\n");
-            close(sockfd);
-            return 1;
-        }
-         // Calculate average RTT
-        double avg_rtt = total_rtt / TIME_INTERVAL;
-        printf("Average RTT: %.6f nanoseconds\n", avg_rtt);
-
-        // Convert average RTT to seconds for bandwidth estimation
-        double avg_rtt_sec = avg_rtt / 1e9;
-        // Estimate optimal window size (assuming 100 Mbps bandwidth)
-        double bandwidth = 100 * 1e6; // 100 Mbps in bits per second
-        double optimal_window = bandwidth * avg_rtt_sec / 8; // Convert bits to bytes
-        printf("Optimal window size: %.2f bytes\n", optimal_window);
+        stop_and_wait(sockfd, PKT_SIZE, TIME_INTERVAL); 
     }
     else if(MODE == 2) {
         printf("======================sliding window==================\n");
