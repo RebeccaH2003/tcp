@@ -77,7 +77,7 @@ void stop_and_wait(int sockfd, uint32_t packet_size, uint64_t duration) {
                     uint64_t rtt_ns = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_usec - start.tv_usec);
 
                     // printf("RTT for packet %u: %lu nanoseconds\n", sequence_number, rtt_ns);
-                    printf("RTT: %llu microseconds\n", rtt_ns);
+                    printf("RTT: %lu microseconds\n", rtt_ns);
                     total_rtt_ns += rtt_ns;
                     num_of_packet++;
                     break; // Exit retry loop
