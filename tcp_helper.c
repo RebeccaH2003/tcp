@@ -1,5 +1,85 @@
 #include "tcp_helper.h"
 
+
+double stop_and_wait(int sockfd, uint32_t packet_size, uint64_t duration) {
+    char buffer[packet_size];
+    memset(buffer, 'A', packet_size); // Fill buffer with dummy data
+    uint64_t total_rtt_ns = 0; // Use nanoseconds for total RTT
+    uint32_t sequence_number = 1; // Start sequence numbers from 1
+
+    struct timespec start, end;
+    // Record start time in nanoseconds
+    clock_gettime(CLOCK_MONOTONIC, &start);
+    uint64_t test_end_time = start.tv_sec + duration;
+
+
+    while (time(NULL) < test_end_time) {
+        int retries = 0;
+        int max_retries = 5; // Maximum number of retransmissions
+        
+        clock_gettime(CLOCK_MONOTONIC, &start);
+        while (retries < max_retries) {
+            // Add sequence number to the packet
+            uint32_t seq_num_net_order = htonl(sequence_number);
+            memcpy(buffer, &seq_num_net_order, sizeof(seq_num_net_order));
+
+            // Send the packet
+            if (send(sockfd, buffer, packet_size, 0) < 0) {
+                perror("send failed");
+                close(sockfd);
+                return -1;
+            }
+
+            // Wait for ACK
+            uint32_t ack_seq_num;
+            ssize_t recv_status = recv(sockfd, &ack_seq_num, sizeof(ack_seq_num), 0);
+            if (recv_status > 0) {
+                // Convert ACK sequence number from network byte order
+                ack_seq_num = ntohl(ack_seq_num);
+
+                if (ack_seq_num == sequence_number) {
+                    // ACK received successfully
+                    clock_gettime(CLOCK_MONOTONIC, &end);
+                    // Calculate RTT in nanoseconds
+                    uint64_t rtt_ns = (end.tv_sec - start.tv_sec) * 1e9 + (end.tv_nsec - start.tv_nsec);
+                    printf("RTT for oacket %d: %lu nanoseconds\n", sequence_number, rtt_ns);
+                    total_rtt_ns += rtt_ns;
+                    break; // Exit retry loop
+                } else {
+                    printf("Sequence mismatch: Expected %u, got %u. Retransmitting...\n", sequence_number, ack_seq_num);
+                    retries++;
+                }
+            } else if (recv_status == 0) {
+                // Connection closed by the server
+                printf("Server closed the connection.\n");
+                close(sockfd);
+                return -1;
+            } else {
+                // Timeout or error
+                if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                    printf("Timeout: Retransmitting packet for packet %d...\n", sequence_number);
+                    retries++;
+                } else {
+                    perror("recv failed");
+                    close(sockfd);
+                    return -1;
+                }
+            }
+        }
+
+        if (retries == max_retries) {
+            printf("Max retries reached for packet %d. Exiting.\n", sequence_number);
+            // close(sockfd);
+            // return -1;
+        }
+
+        sequence_number++; // Increment sequence number for the next packet
+    }
+
+    return (double)total_rtt_ns; // return total rtt in nanoseconds
+}
+
+
 uint32_t sliding_window(int sockfd, uint32_t pkt_size, int duration, uint32_t max_window_size, uint32_t step_size) {
     char *packet = malloc(pkt_size);
     printf("server exit here1\n");

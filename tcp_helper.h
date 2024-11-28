@@ -14,4 +14,5 @@
 #define TEST_ROUNDS 10    // Number of RTT measurements
 #define MAX_WINDOW_SIZE 1024
 
+double stop_and_wait(int sockfd, uint32_t packet_size, uint64_t interval);
 uint32_t sliding_window(int sockfd, uint32_t pkt_size, int duration, uint32_t max_window_size, uint32_t step_size);
