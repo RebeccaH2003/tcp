@@ -8,16 +8,15 @@ void stop_and_wait(int sockfd, uint32_t packet_size, uint64_t duration) {
     uint32_t sequence_number = 1; // Start sequence numbers from 1
     int num_of_packet = 0;
 
-    struct timespec start, end;
+    struct timespec start, end, current;
     // Record start time in nanoseconds
     clock_gettime(CLOCK_MONOTONIC, &start);
     uint64_t test_end_time = start.tv_sec + duration;
     printf("the starting time is %ld \n", start.tv_sec);
     printf("the end time is %lu \n", test_end_time);
     printf("the current time is %lu \n", time(NULL));
-
-
-    while (time(NULL) < test_end_time) {
+    uint64_t current_time = start.tv_sec;
+    while (current_time < test_end_time) {
         printf("inside the interval loop..\n");
         int retries = 0;
         int max_retries = 5; // Maximum number of retransmissions
@@ -88,6 +87,8 @@ void stop_and_wait(int sockfd, uint32_t packet_size, uint64_t duration) {
         }
 
         sequence_number++; // Increment sequence number for the next packet
+        clock_gettime(CLOCK_MONOTONIC, &current);
+        current_time = current.tv_sec;
     }
 
     // return (double)total_rtt_ns; // return total rtt in nanoseconds
