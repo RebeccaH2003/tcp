@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <time.h>
 #include <errno.h>
+#include <sys/time.h>
 
 #define BUFFER_SIZE 1024  // Smaller buffer for Stop-and-Wait
 #define TEST_ROUNDS 10    // Number of RTT measurements

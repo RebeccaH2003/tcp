@@ -8,20 +8,37 @@ void stop_and_wait(int sockfd, uint32_t packet_size, uint64_t duration) {
     uint32_t sequence_number = 1; // Start sequence numbers from 1
     int num_of_packet = 0;
 
-    struct timespec start, end, current;
+    // struct timespec start, end, current;
+    // clock_gettime(CLOCK_MONOTONIC, &start);
+    // uint64_t test_end_time = start.tv_sec + duration;
     // Record start time in nanoseconds
-    clock_gettime(CLOCK_MONOTONIC, &start);
-    uint64_t test_end_time = start.tv_sec + duration;
-    printf("the starting time is %ld \n", start.tv_sec);
-    printf("the end time is %lu \n", test_end_time);
-    printf("the current time is %lu \n", time(NULL));
-    uint64_t current_time = start.tv_sec;
+    // printf("the starting time is %ld \n", start.tv_sec);
+    // printf("the end time is %lu \n", test_end_time);
+    // printf("the current time is %lu \n", time(NULL));
+    // uint64_t current_time = start.tv_sec;
+
+    // ============== try timeval struct
+    struct timeval start, end, curr;
+    gettimeofday(&start, NULL);  // Get current time
+
+    uint64_t start_time_in_microseconds = (uint64_t)start.tv_sec * 1000000 + start.tv_usec;
+    uint64_t duration_in_microseconds = duration * 1000000;
+    uint64_t test_end_time = start_time_in_microseconds + duration_in_microseconds;
+
+    printf("Starting time: %ld seconds, %ld microseconds\n", start.tv_sec, start.tv_usec);
+    printf("End time (target): %lu microseconds\n", test_end_time);
+    printf("Current time in seconds (time(NULL)): %lu\n", time(NULL));
+
+    uint64_t current_time = start_time_in_microseconds;
+    // ==============
     while (current_time < test_end_time) {
         printf("inside the interval loop..\n");
         int retries = 0;
         int max_retries = 5; // Maximum number of retransmissions
         
-        clock_gettime(CLOCK_MONOTONIC, &start);
+        // clock_gettime(CLOCK_MONOTONIC, &start);
+        gettimeofday(&start, NULL);  // Get current time
+
         while (retries < max_retries) {
             printf("try number: %d\n", retries+1);
             // Add sequence number to the packet
@@ -51,10 +68,16 @@ void stop_and_wait(int sockfd, uint32_t packet_size, uint64_t duration) {
                 if (ack_seq_num == sequence_number) {
                     printf("received successfully!\n");
                     // ACK received successfully
-                    clock_gettime(CLOCK_MONOTONIC, &end);
+                    // clock_gettime(CLOCK_MONOTONIC, &end);
+                    gettimeofday(&end, NULL);  // Get current time
+
                     // Calculate RTT in nanoseconds
-                    uint64_t rtt_ns = (end.tv_sec - start.tv_sec) * 1e9 + (end.tv_nsec - start.tv_nsec);
-                    printf("RTT for packet %u: %lu nanoseconds\n", sequence_number, rtt_ns);
+                    // uint64_t rtt_ns = (end.tv_sec - start.tv_sec) * 1e9 + (end.tv_nsec - start.tv_nsec);
+                    // actually in microseconds
+                    uint64_t rtt_ns = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_usec - start.tv_usec);
+
+                    // printf("RTT for packet %u: %lu nanoseconds\n", sequence_number, rtt_ns);
+                    printf("RTT: %llu microseconds\n", rtt_ns);
                     total_rtt_ns += rtt_ns;
                     num_of_packet++;
                     break; // Exit retry loop
@@ -89,22 +112,23 @@ void stop_and_wait(int sockfd, uint32_t packet_size, uint64_t duration) {
         }
 
         sequence_number++; // Increment sequence number for the next packet
-        clock_gettime(CLOCK_MONOTONIC, &current);
-        current_time = current.tv_sec;
+        gettimeofday(&curr, NULL);
+        // clock_gettime(CLOCK_MONOTONIC, &current);
+        current_time = curr.tv_sec * 1000000 + curr.tv_usec;
     }
 
     // return (double)total_rtt_ns; // return total rtt in nanoseconds
     printf("the total rtt is %f",(double)total_rtt_ns);
      // Calculate average RTT
-    double avg_rtt = (double)total_rtt_ns / (double)num_of_packet;
-    printf("Average RTT: %.6f nanoseconds\n", avg_rtt);
+    // double avg_rtt = (double)total_rtt_ns / (double)num_of_packet;
+    // printf("Average RTT: %.6f nanoseconds\n", avg_rtt);
 
-    // Convert average RTT to seconds for bandwidth estimation
-    double avg_rtt_sec = avg_rtt / 1e9;
-    // Estimate optimal window size (assuming 100 Mbps bandwidth)
-    double bandwidth = 100 * 1e6; // 100 Mbps in bits per second
-    double optimal_window = bandwidth * avg_rtt_sec / 8; // Convert bits to bytes
-    printf("Optimal window size: %.2f bytes\n", optimal_window);
+    // // Convert average RTT to seconds for bandwidth estimation
+    // double avg_rtt_sec = avg_rtt / 1e9;
+    // // Estimate optimal window size (assuming 100 Mbps bandwidth)
+    // double bandwidth = 100 * 1e6; // 100 Mbps in bits per second
+    // double optimal_window = bandwidth * avg_rtt_sec / 8; // Convert bits to bytes
+    // printf("Optimal window size: %.2f bytes\n", optimal_window);
 }
 
 
