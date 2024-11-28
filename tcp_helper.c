@@ -42,10 +42,11 @@ void stop_and_wait(int sockfd, uint32_t packet_size, uint64_t duration) {
             uint32_t ack_seq_num;
             
             ssize_t recv_status = recv(sockfd, &ack_seq_num, sizeof(ack_seq_num), 0);
-            printf("get the receive, ack_seq_num: %u \n", ack_seq_num);
+            
             if (recv_status > 0) {
                 // Convert ACK sequence number from network byte order
                 ack_seq_num = ntohl(ack_seq_num);
+                printf("get the receive, ack_seq_num: %u \n", ack_seq_num);
 
                 if (ack_seq_num == sequence_number) {
                     printf("received successfully!\n");
