@@ -212,5 +212,5 @@ uint32_t sliding_window(int sockfd, uint32_t pkt_size, int duration, uint32_t ma
     printf("\nBest Window Size: %u packets (%u bytes) with Bandwidth: %.2Lf Mbps\n", best_window, best_window * pkt_size, best_bandwidth);
 
     free(packet);
-    return best_window; // Return the best window size
+    return best_window; // Return the best window size  ////
 }
